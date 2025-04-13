@@ -4,7 +4,9 @@ import { io, Socket } from 'socket.io-client';
 import Game from './components/Game';
 
 // Update this URL with your ngrok URL when you start the tunnel
-const SERVER_URL = 'https://show-5oru.onrender.com'; // Change this to your ngrok URL when needed
+const SERVER_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-render-app.onrender.com' 
+  : 'http://localhost:3001';
 
 const AppContainer = styled.div`
   display: flex;
@@ -89,33 +91,63 @@ const App: React.FC = () => {
   const [displayRoomId, setDisplayRoomId] = useState('');
 
   useEffect(() => {
-    if (socket) {
-      socket.on('roomCreated', (newRoomId: string) => {
-        setDisplayRoomId(newRoomId);
-        setRoomId(newRoomId);
-      });
+    const socket = io(SERVER_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000
+    });
 
-      socket.on('joinedRoom', (joinedRoomId: string) => {
-        setDisplayRoomId(joinedRoomId);
-        setRoomId(joinedRoomId);
-      });
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
 
-      socket.on('gameStarted', () => {
-        setGameState('game');
-      });
+    socket.on('connect_timeout', (timeout) => {
+      console.error('Socket connection timeout:', timeout);
+    });
 
-      socket.on('error', (error: string) => {
-        alert(error);
-      });
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+    });
 
-      return () => {
-        socket.off('roomCreated');
-        socket.off('joinedRoom');
-        socket.off('gameStarted');
-        socket.off('error');
-      };
-    }
-  }, [socket]);
+    socket.on('reconnect_error', (error) => {
+      console.error('Socket reconnection error:', error);
+    });
+
+    socket.on('reconnect_failed', () => {
+      console.error('Socket reconnection failed');
+    });
+
+    socket.on('roomCreated', (newRoomId: string) => {
+      setDisplayRoomId(newRoomId);
+      setRoomId(newRoomId);
+    });
+
+    socket.on('joinedRoom', (joinedRoomId: string) => {
+      setDisplayRoomId(joinedRoomId);
+      setRoomId(joinedRoomId);
+    });
+
+    socket.on('gameStarted', () => {
+      setGameState('game');
+    });
+
+    socket.on('error', (error: string) => {
+      alert(error);
+    });
+
+    setSocket(socket);
+    setPlayerId(Math.random().toString(36).substr(2, 9));
+
+    return () => {
+      socket.disconnect();
+      socket.off('roomCreated');
+      socket.off('joinedRoom');
+      socket.off('gameStarted');
+      socket.off('error');
+    };
+  }, []);
 
   const createRoom = () => {
     const newSocket = io(SERVER_URL);

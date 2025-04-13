@@ -13,6 +13,13 @@
     "cors": "^2.8.5"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": "14.x"
+  },
+  "railway": {
+    "$schema": "https://railway.app/railway.schema.json",
+    "build": {
+      "builder": "NIXPACKS",
+      "buildCommand": "npm install"
+    }
   }
 } 

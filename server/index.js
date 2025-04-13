@@ -23,6 +23,9 @@ app.get('/keep-alive', (req, res) => {
   res.status(200).send('OK');
 });
 
+// Serve static files from the public directory
+app.use(express.static('public'));
+
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -30,7 +33,8 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   },
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  transports: ['websocket', 'polling']
 });
 
 // Error handling for socket.io
@@ -226,11 +230,18 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-  
-  // Log when the server starts
   console.log('Server is ready to accept connections');
+});
+
+// Handle process termination
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 // Handle uncaught exceptions
