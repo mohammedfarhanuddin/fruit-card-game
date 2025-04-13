@@ -7,12 +7,35 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+// Add health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// Add keep-alive endpoint
+app.get('/keep-alive', (req, res) => {
+  res.status(200).send('OK');
+});
+
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "*", // Allow all origins in production
     methods: ["GET", "POST"]
-  }
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
+
+// Error handling for socket.io
+io.on('error', (error) => {
+  console.error('Socket.IO Error:', error);
 });
 
 const rooms = new Map();
@@ -26,6 +49,7 @@ class Room {
     this.gameStarted = false;
     this.currentPlayer = null;
     this.showOrder = [];
+    console.log(`Room ${id} created`);
   }
 
   initializeGame() {
@@ -119,16 +143,27 @@ class Room {
 }
 
 io.on('connection', (socket) => {
+  console.log('New client connected');
   let currentRoom = null;
   let playerId = uuidv4();
 
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+
   socket.on('createRoom', () => {
-    const roomId = uuidv4();
-    const room = new Room(roomId);
-    rooms.set(roomId, room);
-    currentRoom = room;
-    socket.join(roomId);
-    socket.emit('roomCreated', roomId);
+    try {
+      const roomId = uuidv4();
+      const room = new Room(roomId);
+      rooms.set(roomId, room);
+      currentRoom = room;
+      socket.join(roomId);
+      socket.emit('roomCreated', roomId);
+      console.log(`Room ${roomId} created by player ${playerId}`);
+    } catch (error) {
+      console.error('Error creating room:', error);
+      socket.emit('error', 'Failed to create room');
+    }
   });
 
   socket.on('joinRoom', (roomId) => {
@@ -177,10 +212,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    console.log('Client disconnected');
     if (currentRoom) {
       currentRoom.removePlayer(playerId);
       if (currentRoom.players.size === 0) {
         rooms.delete(currentRoom.id);
+        console.log(`Room ${currentRoom.id} deleted`);
       } else {
         currentRoom.broadcastGameState();
       }
@@ -191,4 +228,17 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Log when the server starts
+  console.log('Server is ready to accept connections');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
 }); 

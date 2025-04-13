@@ -4,7 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import Game from './components/Game';
 
 // Update this URL with your ngrok URL when you start the tunnel
-const SERVER_URL = 'http://localhost:3001'; // Change this to your ngrok URL when needed
+const SERVER_URL = 'https://show-5oru.onrender.com'; // Change this to your ngrok URL when needed
 
 const AppContainer = styled.div`
   display: flex;
