@@ -5,7 +5,7 @@ import Game from './components/Game';
 
 // Update this URL with your ngrok URL when you start the tunnel
 const SERVER_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-render-app.onrender.com' 
+  ? 'https://show-5oru.onrender.com' 
   : 'http://localhost:3001';
 
 const AppContainer = styled.div`
@@ -150,26 +150,21 @@ const App: React.FC = () => {
   }, []);
 
   const createRoom = () => {
-    const newSocket = io(SERVER_URL);
-    newSocket.emit('createRoom');
-    setSocket(newSocket);
-    setPlayerId(Math.random().toString(36).substr(2, 9));
+    if (socket) {
+      socket.emit('createRoom');
+    }
   };
 
   const joinRoom = () => {
-    if (roomId) {
-      const newSocket = io(SERVER_URL);
-      newSocket.emit('joinRoom', roomId);
-      setSocket(newSocket);
-      setPlayerId(Math.random().toString(36).substr(2, 9));
+    if (socket && roomId) {
+      socket.emit('joinRoom', roomId);
     }
   };
 
   const joinRandom = () => {
-    const newSocket = io(SERVER_URL);
-    newSocket.emit('joinRandom');
-    setSocket(newSocket);
-    setPlayerId(Math.random().toString(36).substr(2, 9));
+    if (socket) {
+      socket.emit('joinRandom');
+    }
   };
 
   const startGame = () => {
